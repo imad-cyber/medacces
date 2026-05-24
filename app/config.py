@@ -1,7 +1,6 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
 from typing import Optional
-from pydantic_settings import BaseSettings
 
 
 # Path to the project root (the medacces/ folder)
@@ -45,3 +44,4 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
+settings = Settings()
