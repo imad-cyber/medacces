@@ -29,9 +29,6 @@ from app.database import engine
 from app.models import db_models
 from app.routers import predictions, model, communes
 
-#_____ create db tables at startup _____
-# Safe to call repeatedly - skips tables that already exists
-db_models.Base.metadata.create_all(bind = engine)
 
 
 #____ Lifespan ___________
@@ -50,6 +47,10 @@ async def lifespan(app: FastAPI):
 
     #_____startup_____
     print("medacces API starting......")
+
+    #_____ create db tables at startup _____
+    # Safe to call repeatedly - skips tables that already exists
+    db_models.Base.metadata.create_all(bind = engine)
 
     try:
         from ml.predict import load_model
