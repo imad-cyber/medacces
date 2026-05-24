@@ -1,5 +1,8 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
+from typing import Optional
+from pydantic_settings import BaseSettings
+
 
 # Path to the project root (the medacces/ folder)
 # __file__ = app/config.py
@@ -16,10 +19,13 @@ class Settings(BaseSettings):
     """
 
     # ── Database ────────────────────────────────────────────
-    database_url: str
+    # database_url: str
+    database_url: Optional[str] = "postgresql://dummy_url"
+    secret_key: Optional[str] = "default_secret_key"
+
 
     # ── Security ─────────────────────────────────────────────
-    secret_key: str
+    #   secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
@@ -39,5 +45,3 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-# Single instance — import THIS everywhere, never re-instantiate
-settings = Settings()
