@@ -28,7 +28,8 @@ COPY . .
 # Train the ML Model at runtime
 # This means the container starts with a ready model
 # No cold-start training delay when the container launches
-RUN python ml/data_ingestion.py && python ml/pipeline.py
+RUN python -m ml.data_ingestion && python -m ml.pipeline
+
 
 #________________________________________
 # Stage 2: Runtime
