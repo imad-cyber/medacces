@@ -1,0 +1,23 @@
+artifact_path: file:D:/PROJECTS/medacces/mlruns/1/models/m-214d5fd8c5a3487e8ce4e4e009952fa8/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.10
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.12.0
+model_id: m-214d5fd8c5a3487e8ce4e4e009952fa8
+model_size_bytes: 1576562
+model_uuid: m-214d5fd8c5a3487e8ce4e4e009952fa8
+prompts: null
+run_id: 86c3200d8b0245b4b825b13f111da93c
+utc_time_created: '2026-05-24 12:42:19.437193'

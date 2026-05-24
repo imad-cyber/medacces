@@ -1,0 +1,33 @@
+#Virtual Environment - Docker installs its own
+.venv/
+
+# Python cache - not needed in container 
+__pycache__/
+*.pyc
+*.pyo
+
+# Git history - not needed in container
+.git/
+.gitignore
+
+# Local Environment file - secrets injected Separately
+.env
+
+# Local Database File
+*.db
+*.sqlite3
+
+# Test files - Not needed in production image
+tests/
+
+# IDE Files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Mlflow runs - not needed in image
+models/mlruns/
+

@@ -1,0 +1,40 @@
+# API
+fastapi
+uvicorn[standard]
+gunicorn
+
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+
+# Validation + Config
+pydantic[email]
+pydantic-settings
+python-dotenv
+
+# Auth
+python-jose[cryptography]
+passlib[bcrypt]
+
+# ML Core
+scikit-learn
+xgboost
+pandas
+numpy
+joblib
+
+# Experiment Tracking
+mlflow
+
+# HTTP
+requests
+httpx
+
+# Dashboard
+streamlit
+plotly
+
+# Testing
+pytest
+pytest-asyncio

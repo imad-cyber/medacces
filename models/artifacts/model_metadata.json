@@ -1,0 +1,90 @@
+{
+  "model_name": "xgboost",
+  "version": "20260524_174349",
+  "trained_at": "2026-05-24T17:43:49.534603",
+  "features": [
+    "population_log",
+    "urban_score",
+    "elderly_ratio",
+    "gp_count",
+    "specialist_density",
+    "pharmacy_score",
+    "wealth_index",
+    "population_growth_rate",
+    "avg_gp_age",
+    "teleconsult_score"
+  ],
+  "target": "medical_desert_risk",
+  "risk_labels": {
+    "0": "Low",
+    "1": "Medium",
+    "2": "High"
+  },
+  "metrics": {
+    "accuracy": 0.59,
+    "f1_weighted": 0.5744,
+    "cv_f1_mean": 0.5837,
+    "cv_f1_std": 0.0177
+  },
+  "class_report": {
+    "Low": {
+      "precision": 0.7049,
+      "recall": 0.7834,
+      "f1-score": 0.7421,
+      "support": 314.0
+    },
+    "Medium": {
+      "precision": 0.3558,
+      "recall": 0.2434,
+      "f1-score": 0.2891,
+      "support": 152.0
+    },
+    "High": {
+      "precision": 0.483,
+      "recall": 0.5299,
+      "f1-score": 0.5053,
+      "support": 134.0
+    },
+    "macro avg": {
+      "precision": 0.5145,
+      "recall": 0.5189,
+      "f1-score": 0.5122,
+      "support": 600.0
+    },
+    "weighted avg": {
+      "precision": 0.5669,
+      "recall": 0.59,
+      "f1-score": 0.5744,
+      "support": 600.0
+    }
+  },
+  "feature_importance": {
+    "population_log": 0.05,
+    "urban_score": 0.4785,
+    "elderly_ratio": 0.0383,
+    "gp_count": 0.1375,
+    "specialist_density": 0.104,
+    "pharmacy_score": 0.0404,
+    "wealth_index": 0.0374,
+    "population_growth_rate": 0.0388,
+    "avg_gp_age": 0.0383,
+    "teleconsult_score": 0.0369
+  },
+  "confusion_matrix": [
+    [
+      246,
+      39,
+      29
+    ],
+    [
+      68,
+      37,
+      47
+    ],
+    [
+      35,
+      28,
+      71
+    ]
+  ]
+}

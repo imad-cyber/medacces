@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+
+  # ── FastAPI Application ─────────────────────────────────────
+  api:
+    build: .
+    container_name: medacces_api
+    ports:
+      - "8000:8000"        # host:container
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/medacces
+      - SECRET_KEY=local-dev-secret-change-in-production
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - ENVIRONMENT=development
+    depends_on:
+      db:
+        condition: service_healthy    # wait for postgres to be ready
+    restart: unless-stopped
+    volumes:
+      # Persist model artifacts across container restarts
+      # Without this, retraining results are lost on restart
+      - model_data:/app/models
+
+  # ── PostgreSQL Database ─────────────────────────────────────
+  db:
+    image: postgres:15-alpine         # alpine = smaller image
+    container_name: medacces_db
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB:       medacces
+    volumes:
+      # Named volume — data survives container restarts
+      # Without this, your database is wiped every restart
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Railway and docker compose wait for this to pass
+      # before starting the API container
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"    # expose so you can connect with DBeaver/pgAdmin
+
+
+# ── Named Volumes ───────────────────────────────────────────────────
+# Managed by Docker — persist data outside containers
+# docker compose down        → data survives
+# docker compose down -v     → data deleted (nuclear option)
+volumes:
+  postgres_data:
+  model_data:
