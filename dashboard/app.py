@@ -57,6 +57,18 @@ def _st_button(label, **kwargs):
         kwargs.pop("type", None)
         return st.button(label, **kwargs)
 
+
+def _nav_to(page_label: str):
+    """
+    Navigate without mutating `st.session_state.nav_page` after the sidebar widget
+    with key `nav_page` has been instantiated in the current run.
+
+    We stage the navigation into `_nav_target` and apply it at the top of
+    `render_sidebar()` on the next rerun (before the radio widget is created).
+    """
+    st.session_state["_nav_target"] = page_label
+    st.rerun()
+
 # ─────────────────────────────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────
@@ -612,6 +624,10 @@ PROFILES = {
 # ─────────────────────────────────────────────────────────────────────
 
 def render_sidebar() -> str:
+    # Apply staged navigation before instantiating the sidebar widget keyed `nav_page`
+    if "_nav_target" in st.session_state:
+        st.session_state["nav_page"] = st.session_state.pop("_nav_target")
+
     # Brand
     st.sidebar.markdown(f"""
     <div style="padding:24px 16px 20px;">
@@ -685,13 +701,11 @@ def page_home():
     # CTA (jump into demo / metrics)
     cta1, cta2, _ = st.columns([1, 1, 2])
     with cta1:
-        if st.button("🎯  Open live demo", use_container_width=True):
-            st.session_state["nav_page"] = "🎯  Predict"
-            st.rerun()
+        if st.button("🎯  Open live demo", use_container_width=True, key="cta_open_demo"):
+            _nav_to("🎯  Predict")
     with cta2:
-        if st.button("🤖  View model metrics", use_container_width=True):
-            st.session_state["nav_page"] = "🤖  Model"
-            st.rerun()
+        if st.button("🤖  View model metrics", use_container_width=True, key="cta_view_model"):
+            _nav_to("🤖  Model")
 
     # Meta row
     st.markdown(f"""
@@ -842,12 +856,12 @@ def page_home():
             color:{mc};font-weight:500;width:36px;flex-shrink:0;">{method}</span>
           <span style="font-family:'DM Mono',monospace;font-size:12px;
             color:#f1f5f9;width:220px;flex-shrink:0;">{path}</span>
-          <span style="font-size:12px;color:{MUTED};">{desc}</span>
+        <span style="font-size:12px;color:{MUTED};">{desc}</span>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🎯  Go to Predict", use_container_width=True):
-            st.session_state["nav_page"] = "🎯  Predict"
-            st.rerun()
+
+    if st.button("🎯  Go to Predict", use_container_width=True, key="home_go_predict"):
+        _nav_to("🎯  Predict")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -990,7 +1004,7 @@ def page_predict():
         )
 
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-        run_btn = st.button("⚡  Run inference", use_container_width=True)
+        run_btn = st.button("⚡  Run inference", use_container_width=True, key="predict_run_inference")
 
     # ── RIGHT: Result ─────────────────────────────────────────────────
     with col_result:
@@ -1147,7 +1161,7 @@ def page_predict():
     </p>
     """, unsafe_allow_html=True)
 
-    if st.button("⚡  Run batch inference on 3 reference communes"):
+    if st.button("⚡  Run batch inference on 3 reference communes", key="predict_run_batch"):
         batch_communes = [
             PROFILES["Rural · Creuse (expected High)"],
             PROFILES["Peri-urban · Indre (expected Medium)"],
@@ -1706,7 +1720,7 @@ def page_model():
         )
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    if st.button("🔄  Trigger model retraining via API"):
+    if st.button("🔄  Trigger model retraining via API", key="model_trigger_retrain"):
         resp = api_post("/model/retrain", {})
         if resp:
             st.success(f"✅ {resp.get('message','Retraining started.')}")
