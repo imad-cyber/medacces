@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import Field, AliasChoices
 from pathlib import Path
 from typing import Optional
 
@@ -18,8 +19,12 @@ class Settings(BaseSettings):
     """
 
     # ── Database ────────────────────────────────────────────
-    # database_url: str
-    database_url: Optional[str] = "postgresql://dummy_url"
+    # Database URL
+    # Supports common platform env vars (e.g. Railway/Heroku `DATABASE_URL`) and local `.env` `database_url`.
+    database_url: Optional[str] = Field(
+        default="sqlite:///./medacces.db",
+        validation_alias=AliasChoices("DATABASE_URL", "database_url"),
+    )
     secret_key: Optional[str] = "default_secret_key"
 
 

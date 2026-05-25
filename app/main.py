@@ -29,9 +29,10 @@ from app.database import engine
 from app.models import db_models
 from app.routers import predictions, model, communes
 
-#_____ create db tables at startup _____
-# Safe to call repeatedly - skips tables that already exists
-db_models.Base.metadata.create_all(bind = engine)
+# NOTE:
+# Don't attempt DB connections at import time. On platforms like Railway, a service
+# can start before the database is reachable or env vars are configured.
+# We create tables during lifespan startup instead and fail gracefully.
 
 
 #____ Lifespan ___________
@@ -51,6 +52,12 @@ async def lifespan(app: FastAPI):
     #_____startup_____
     print("medacces API starting......")
 
+    #_____ DB init (best-effort) _____
+    try:
+        db_models.Base.metadata.create_all(bind=engine)
+        print("Database    : connected")
+    except Exception as e:
+        print(f"Database    : not ready ({e})")
 
     try:
         from ml.predict import load_model
@@ -61,7 +68,6 @@ async def lifespan(app: FastAPI):
         print(f"Model Load Error : {e}")
 
     print(f"Environment : {settings.environment}")
-    print(f"Database    : connected")
     print(f"API ready   : http://localhost:8000")
     print(f"Docs        : http://localhost:8000/docs")
 
