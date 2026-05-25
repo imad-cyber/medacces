@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir \
     numpy \
     requests
 
-# Copy the Streamlit dashboard into the container as the app entrypoint.
+# Copy the Streamlit dashboard (repo root build context) into the container.
 COPY dashboard/app.py /app/app.py
 
 # Streamlit config: bind to 0.0.0.0 and disable usage stats.
@@ -32,4 +32,3 @@ RUN mkdir -p /root/.streamlit && printf '%s\n' \
 EXPOSE 8501
 
 CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false"]
-
