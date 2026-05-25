@@ -73,7 +73,7 @@ def _nav_to(page_label: str):
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────
 
-API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")'''
+API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 DATA_PATH = Path(__file__).parent.parent / "data" / "raw" / "communes_health.csv"
 META_PATH = Path(__file__).parent.parent / "models" / "artifacts" / "model_metadata.json"
 
