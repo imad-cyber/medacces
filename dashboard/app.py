@@ -486,7 +486,7 @@ PLOTLY_CFG = {"displayModeBar": False}
 def api_get(endpoint: str):
     try:
         r = requests.get(f"{API_URL}{endpoint}", timeout=8)
-        return r.json() if r.status_code == 200 else None
+        return r.json() if 200 <= r.status_code < 300 else None
     except Exception:
         return None
 
@@ -494,14 +494,20 @@ def api_get(endpoint: str):
 def api_post(endpoint: str, payload: dict):
     try:
         r = requests.post(f"{API_URL}{endpoint}", json=payload, timeout=10)
-        return r.json() if r.status_code == 200 else None
+        return r.json() if 200 <= r.status_code < 300 else None
     except Exception:
         return None
 
 
 def api_online() -> bool:
     try:
-        return requests.get(f"{API_URL}/health", timeout=4).status_code == 200
+        # FastAPI health endpoint lives under `/model/health` in this repo.
+        # Keep `/health` as a fallback for alternative deployments.
+        r1 = requests.get(f"{API_URL}/model/health", timeout=4)
+        if r1.status_code == 200:
+            return True
+        r2 = requests.get(f"{API_URL}/health", timeout=4)
+        return r2.status_code == 200
     except Exception:
         return False
 
@@ -1292,11 +1298,7 @@ def page_analytics():
             ),
             hovertemplate="Dept %{y}: %{x} high-risk communes<extra></extra>",
         ))
-        fig_bar.update_layout(
-            **plotly_layout(height=280),
-            xaxis=dict(title=None, gridcolor=BORDER),
-            yaxis=dict(title=None, gridcolor=BORDER),
-        )
+        fig_bar.update_layout(**plotly_layout(height=280))
         st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CFG)
 
     # Feature distributions
@@ -1724,9 +1726,12 @@ def page_model():
     if st.button("🔄  Trigger model retraining via API", key="model_trigger_retrain"):
         resp = api_post("/model/retrain", {})
         if resp:
-            st.success(f"✅ {resp.get('message','Retraining started.')}")
+            st.success(resp.get("message", "Retraining started in the background."))
         else:
-            st.warning("API offline. Run locally: `python ml/pipeline.py`")
+            if api_online():
+                st.warning("Retrain request failed. Check backend logs for details.")
+            else:
+                st.warning("Backend API not reachable. Set `API_URL` to your deployed backend, or run locally.")
 
     # Quick start guide
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -2027,9 +2032,10 @@ def page_map():
         else:
             st.markdown(html_card(f"""
             <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
-              Map geometry not found. Add a GeoJSON at
+              Department geometry is not configured, so the map renders a ranked view instead.
+              To enable the choropleth, add
               <span style="font-family:'DM Mono',monospace;">data/geo/fr_departements.geojson</span>
-              with department code in <span style="font-family:'DM Mono',monospace;">properties.code</span>.
+              (see <span style="font-family:'DM Mono',monospace;">data/geo/README.md</span>).
             </div>
             """), unsafe_allow_html=True)
 
