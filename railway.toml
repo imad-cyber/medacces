@@ -7,7 +7,7 @@ dockerfilePath = "Dockerfile"
 # This start command supports both services; select behavior with SERVICE_TYPE:
 # - SERVICE_TYPE=frontend -> Streamlit dashboard
 # - (default)            -> FastAPI backend
-startCommand = "sh -c \"if [ \\\"${SERVICE_TYPE:-backend}\\\" = \\\"frontend\\\" ]; then streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false; else gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --timeout 120 --access-logfile - --error-logfile -; fi\""
+startCommand = "sh -c \"if [ \\\"${SERVICE_TYPE:-backend}\\\" = \\\"frontend\\\" ]; then streamlit run dashboard/app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false; else gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --timeout 120 --access-logfile - --error-logfile -; fi\""
 # Use `/` so it succeeds for both Streamlit and FastAPI.
 healthcheckPath = "/"
 healthcheckTimeout = 300

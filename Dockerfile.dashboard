@@ -11,8 +11,8 @@ RUN pip install --no-cache-dir \
     numpy \
     requests
 
-# Copy only the dashboard file
-COPY dashboard/app.py .
+# Copy only the dashboard file (keep its path stable)
+COPY dashboard/app.py /app/dashboard/app.py
 
 # Streamlit config — disable the default welcome screen
 # and bind to 0.0.0.0 so Railway can reach it
@@ -35,7 +35,7 @@ base = "dark"\n\
 EXPOSE 8501
 
 # Railway injects $PORT — we respect it
-CMD streamlit run app.py \
+CMD streamlit run dashboard/app.py \
     --server.port=${PORT:-8501} \
     --server.address=0.0.0.0 \
     --server.headless=true \
