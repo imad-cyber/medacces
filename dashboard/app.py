@@ -28,6 +28,7 @@ import math
 import json
 from pathlib import Path
 import os
+import streamlit.components.v1 as components
 
 def _fix_mojibake(value):
     """
@@ -1409,11 +1410,9 @@ def page_analytics():
                 f"Risk: {RISK_LABELS[r]}<extra></extra>"
             ),
         ))
-    fig_sc.update_layout(
-        **plotly_layout(height=340),
-        xaxis=dict(title="Elderly ratio (65+)", tickformat=".0%"),
-        yaxis=dict(title="GP density per 100k"),
-    )
+    fig_sc.update_layout(**plotly_layout(height=340))
+    fig_sc.update_xaxes(title="Elderly ratio (65+)", tickformat=".0%")
+    fig_sc.update_yaxes(title="GP density per 100k")
     st.plotly_chart(fig_sc, use_container_width=True, config=PLOTLY_CFG)
 
     # Prediction audit log
@@ -1961,8 +1960,136 @@ def _dept_agg(df: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values("high", ascending=False)
 
 
+# Stylized France "dot map" layout (from `medacces_portfolio_ui.html` design)
+FAKE_FRANCE_DOTS = [
+    {"x":155,"y":28,"r":3.5},{"x":170,"y":32,"r":4},{"x":185,"y":28,"r":3},
+    {"x":200,"y":35,"r":3.5},{"x":215,"y":32,"r":3},{"x":140,"y":42,"r":4},
+    {"x":155,"y":50,"r":5},{"x":172,"y":48,"r":4.5},{"x":188,"y":52,"r":4},
+    {"x":205,"y":48,"r":3.5},{"x":222,"y":45,"r":3},{"x":238,"y":40,"r":3.5},
+    {"x":128,"y":60,"r":4.5},{"x":145,"y":65,"r":5},{"x":162,"y":68,"r":5.5},
+    {"x":178,"y":64,"r":5},{"x":195,"y":65,"r":4.5},{"x":212,"y":62,"r":4},
+    {"x":228,"y":58,"r":3.5},{"x":244,"y":55,"r":3},{"x":260,"y":52,"r":3.5},
+    {"x":115,"y":80,"r":4},{"x":132,"y":82,"r":4.5},{"x":148,"y":84,"r":5},
+    {"x":164,"y":82,"r":5.5},{"x":180,"y":80,"r":6},{"x":196,"y":82,"r":5},
+    {"x":212,"y":80,"r":4.5},{"x":228,"y":78,"r":4},{"x":244,"y":75,"r":3.5},
+    {"x":260,"y":72,"r":3.5},{"x":275,"y":68,"r":3},{"x":290,"y":65,"r":4},
+    {"x":110,"y":100,"r":4},{"x":126,"y":100,"r":4.5},{"x":142,"y":102,"r":5},
+    {"x":158,"y":100,"r":5.5},{"x":174,"y":98,"r":6},{"x":190,"y":98,"r":5.5},
+    {"x":206,"y":100,"r":5},{"x":222,"y":98,"r":4.5},{"x":238,"y":96,"r":4},
+    {"x":254,"y":94,"r":4},{"x":270,"y":92,"r":3.5},{"x":286,"y":90,"r":4},
+    {"x":302,"y":88,"r":3.5},{"x":315,"y":82,"r":3},
+    {"x":108,"y":120,"r":4},{"x":124,"y":118,"r":4.5},{"x":140,"y":120,"r":5},
+    {"x":156,"y":118,"r":5.5},{"x":172,"y":116,"r":6},{"x":188,"y":118,"r":5.5},
+    {"x":204,"y":118,"r":5},{"x":220,"y":116,"r":4.5},{"x":236,"y":114,"r":4},
+    {"x":252,"y":112,"r":4},{"x":268,"y":110,"r":4},{"x":284,"y":108,"r":3.5},
+    {"x":300,"y":106,"r":3.5},{"x":315,"y":102,"r":3},
+    {"x":112,"y":140,"r":4},{"x":128,"y":138,"r":4.5},{"x":144,"y":140,"r":5},
+    {"x":160,"y":138,"r":5.5},{"x":176,"y":136,"r":6},{"x":192,"y":138,"r":5.5},
+    {"x":208,"y":138,"r":5},{"x":224,"y":136,"r":4.5},{"x":240,"y":134,"r":4},
+    {"x":256,"y":132,"r":3.5},{"x":272,"y":130,"r":4},{"x":288,"y":128,"r":3.5},
+    {"x":120,"y":160,"r":4.5},{"x":136,"y":158,"r":5},{"x":152,"y":160,"r":5.5},
+    {"x":168,"y":158,"r":6},{"x":184,"y":156,"r":5.5},{"x":200,"y":158,"r":5},
+    {"x":216,"y":158,"r":4.5},{"x":232,"y":156,"r":4},{"x":248,"y":154,"r":4},
+    {"x":264,"y":152,"r":3.5},{"x":280,"y":150,"r":3.5},
+    {"x":128,"y":180,"r":4.5},{"x":144,"y":178,"r":5},{"x":160,"y":180,"r":5.5},
+    {"x":176,"y":178,"r":6},{"x":192,"y":176,"r":5.5},{"x":208,"y":178,"r":5},
+    {"x":224,"y":178,"r":4.5},{"x":240,"y":176,"r":4.5},{"x":256,"y":174,"r":4},
+    {"x":270,"y":172,"r":3.5},
+    {"x":136,"y":198,"r":4},{"x":152,"y":200,"r":4.5},{"x":168,"y":198,"r":5},
+    {"x":184,"y":196,"r":5.5},{"x":200,"y":198,"r":5},{"x":216,"y":198,"r":4.5},
+    {"x":232,"y":196,"r":4},{"x":248,"y":194,"r":4},{"x":264,"y":192,"r":3.5},
+    {"x":148,"y":218,"r":4},{"x":164,"y":216,"r":4.5},{"x":180,"y":218,"r":5},
+    {"x":196,"y":216,"r":5},{"x":212,"y":218,"r":4.5},{"x":228,"y":216,"r":4},
+    {"x":244,"y":214,"r":3.5},{"x":260,"y":212,"r":3.5},
+    {"x":160,"y":238,"r":3.5},{"x":176,"y":236,"r":4},{"x":192,"y":238,"r":4.5},
+    {"x":208,"y":236,"r":4.5},{"x":224,"y":238,"r":4},{"x":240,"y":236,"r":3.5},
+    {"x":256,"y":234,"r":3},
+    {"x":172,"y":256,"r":3},{"x":188,"y":258,"r":3.5},{"x":204,"y":256,"r":4},
+    {"x":220,"y":258,"r":3.5},{"x":236,"y":256,"r":3},
+    {"x":188,"y":274,"r":2.5},{"x":204,"y":276,"r":3},{"x":220,"y":274,"r":2.5},
+    {"x":200,"y":292,"r":2},{"x":213,"y":290,"r":2},
+    {"x":70,"y":95,"r":3},{"x":75,"y":110,"r":2.5},{"x":80,"y":125,"r":2.5},
+    {"x":75,"y":140,"r":3},
+]
+
+
+def _fake_map_assign_risks(dept: pd.DataFrame) -> list[str]:
+    """
+    Assign risk labels to dots to roughly match department distribution.
+    Deterministic per run.
+    """
+    if dept is None or dept.empty or "risk_bucket" not in dept.columns:
+        risks = (["high"] * 22) + (["medium"] * 30) + (["low"] * 60)
+    else:
+        counts = dept["risk_bucket"].value_counts().to_dict()
+        risks = (["low"] * int(counts.get(0, 0))) + (["medium"] * int(counts.get(1, 0))) + (["high"] * int(counts.get(2, 0)))
+        if not risks:
+            risks = (["high"] * 22) + (["medium"] * 30) + (["low"] * 60)
+
+    n = len(FAKE_FRANCE_DOTS)
+    if len(risks) < n:
+        risks = (risks + ["low"] * n)[:n]
+    else:
+        risks = risks[:n]
+
+    rng = np.random.default_rng(7)
+    rng.shuffle(risks)
+    return risks
+
+
+def render_fake_france_map(dept: pd.DataFrame):
+    risks = _fake_map_assign_risks(dept)
+    colors = {"high": RED, "medium": AMBER, "low": GREEN}
+    dots_json = json.dumps([
+        {**d, "risk": risks[i], "fill": colors[risks[i]]}
+        for i, d in enumerate(FAKE_FRANCE_DOTS)
+    ])
+
+    html = f"""
+    <div style="background:{PANEL};border:1px solid {BORDER};border-radius:10px;padding:16px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:{MUTED};">
+          Risk distribution · France
+        </div>
+        <div style="display:flex;gap:10px;font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:7px;height:7px;border-radius:999px;background:{RED};display:inline-block;"></span>High</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:7px;height:7px;border-radius:999px;background:{AMBER};display:inline-block;"></span>Medium</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:7px;height:7px;border-radius:999px;background:{GREEN};display:inline-block;"></span>Low</span>
+        </div>
+      </div>
+      <svg id="franceSvg" viewBox="0 0 340 320" width="100%" role="img"
+           aria-label="Stylized risk map of France showing department-level medical desert risk">
+        <title>Medical desert risk map of France</title>
+        <desc>Stylized department distribution (dot map)</desc>
+      </svg>
+    </div>
+
+    <script>
+      (function drawMap() {{
+        const svg = document.getElementById('franceSvg');
+        const depts = {dots_json};
+        depts.forEach((d,i) => {{
+          const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          circle.setAttribute('cx', d.x);
+          circle.setAttribute('cy', d.y);
+          circle.setAttribute('r', d.r);
+          circle.setAttribute('fill', d.fill);
+          circle.setAttribute('opacity', '0');
+          circle.style.transition = `opacity 0.4s ${{i*8}}ms`;
+          const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+          title.textContent = `Risk: ${{d.risk.toUpperCase()}}`;
+          circle.appendChild(title);
+          svg.appendChild(circle);
+          setTimeout(()=>{{ circle.setAttribute('opacity', d.risk==='high'?'0.9':d.risk==='medium'?'0.75':'0.55'); }}, 100 + i*8);
+        }});
+      }})();
+    </script>
+    """
+    components.html(html, height=520, scrolling=False)
+
+
 def page_map():
-    """Interactive France map (geojson if present, graceful fallback otherwise)."""
+    """France map: stylized (design-faithful) dot map + drill-down."""
 
     st.markdown(html_section_label("France map"), unsafe_allow_html=True)
     st.markdown(html_hero_heading(
@@ -1995,96 +2122,20 @@ def page_map():
         st.session_state["map_dept"] = str(dept.iloc[0]["department_code"])
 
     with left:
-        metric = st.selectbox(
-            "Metric",
-            ["Risk (bucketed)", "High-risk communes", "Commune count", "Avg GP density/100k"],
-            index=0,
-        )
+        # Design-faithful stylized map (no GeoJSON needed)
+        render_fake_france_map(dept)
 
-        geo = load_departments_geojson()
-        if geo:
-
-            # Choose value column
-            if metric == "High-risk communes":
-                z = dept["high"]
-                z_title = "High-risk communes"
-            elif metric == "Commune count":
-                z = dept["communes"]
-                z_title = "Communes"
-            elif metric == "Avg GP density/100k":
-                z = dept["gp_density"]
-                z_title = "GP density/100k"
-            else:
-                z = dept["risk_bucket"]
-                z_title = "Risk bucket"
-
-            fig = go.Figure(go.Choropleth(
-                geojson=geo,
-                featureidkey="properties.code",
-                locations=dept["department_code"],
-                z=z,
-                colorscale=[
-                    [0.0, GREEN],
-                    [0.5, AMBER],
-                    [1.0, RED],
-                ] if metric == "Risk (bucketed)" else "Blues",
-                marker_line_color=BORDER,
-                marker_line_width=0.6,
-                colorbar=dict(
-                    title=z_title,
-                    thickness=12,
-                    tickfont=dict(color=ACCENT, family="DM Mono"),
-                    titlefont=dict(color=ACCENT, family="DM Mono", size=11),
-                ),
-                customdata=np.stack([
-                    dept["risk_label"],
-                    dept["communes"],
-                    dept["high"],
-                    dept["gp_density"],
-                ], axis=-1),
-                hovertemplate=(
-                    "<b>Dept %{location}</b><br>"
-                    "Risk: %{customdata[0]}<br>"
-                    "Communes: %{customdata[1]}<br>"
-                    "High-risk: %{customdata[2]}<br>"
-                    "GP density: %{customdata[3]:.1f}/100k"
-                    "<extra></extra>"
-                ),
-            ))
-            fig.update_geos(
-                fitbounds="locations",
-                visible=False,
-                showcountries=False,
-                showcoastlines=False,
-                showframe=False,
-                bgcolor="rgba(0,0,0,0)",
-            )
-            fig.update_layout(**plotly_layout(height=640, margin=dict(l=0, r=0, t=0, b=0)))
-
-            # Click selection
-            ev = st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, on_select="rerun")
-            # Streamlit's plotly selection event API varies by version; provide a deterministic fallback selector below.
-
-        else:
-            st.markdown(html_card(f"""
-            <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
-              Department geometry is not configured, so the map renders a ranked view instead.
-              To enable the choropleth, add
-              <span style="font-family:'DM Mono',monospace;">data/geo/fr_departements.geojson</span>
-              (see <span style="font-family:'DM Mono',monospace;">data/geo/README.md</span>).
-            </div>
-            """), unsafe_allow_html=True)
-
-            # Fallback visualization (still useful)
-            fig_bar = go.Figure(go.Bar(
-                x=dept["high"].head(20).values[::-1],
-                y=dept["department_code"].head(20).values[::-1],
-                orientation="h",
-                marker=dict(color=dept["high"].head(20).values[::-1], colorscale=[[0, AMBER], [1, RED]]),
-                hovertemplate="Dept %{y}: %{x} high-risk communes<extra></extra>",
-            ))
-            fig_bar.update_layout(**plotly_layout(height=520, margin=dict(l=0, r=0, t=10, b=0)))
-            st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CFG)
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        st.markdown(html_section_label("Top departments"), unsafe_allow_html=True)
+        fig_bar = go.Figure(go.Bar(
+            x=dept["high"].head(16).values[::-1],
+            y=dept["department_code"].head(16).values[::-1],
+            orientation="h",
+            marker=dict(color=dept["high"].head(16).values[::-1], colorscale=[[0, AMBER], [1, RED]]),
+            hovertemplate="Dept %{y}: %{x} high-risk communes<extra></extra>",
+        ))
+        fig_bar.update_layout(**plotly_layout(height=360, margin=dict(l=0, r=0, t=10, b=0)))
+        st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CFG)
 
         # Deterministic selection (works in all versions)
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
