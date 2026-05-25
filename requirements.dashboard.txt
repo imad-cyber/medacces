@@ -1,0 +1,9 @@
+# Dashboard-only requirements
+# Kept minimal — no ML training libraries needed
+# The dashboard calls the FastAPI backend for all ML operations
+
+streamlit>=1.35.0
+plotly>=5.18.0
+pandas>=2.0.0
+numpy>=1.26.0
+requests>=2.31.0

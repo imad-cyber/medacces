@@ -2,12 +2,14 @@ version: "3.8"
 
 services:
 
-  # ── FastAPI Application ─────────────────────────────────────
+  # ── FastAPI Backend ──────────────────────────────────────────────
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile          # the main Dockerfile (trains model + runs API)
     container_name: medacces_api
     ports:
-      - "8000:8000"        # host:container
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/medacces
       - SECRET_KEY=local-dev-secret-change-in-production
@@ -16,40 +18,44 @@ services:
       - ENVIRONMENT=development
     depends_on:
       db:
-        condition: service_healthy    # wait for postgres to be ready
+        condition: service_healthy
     restart: unless-stopped
     volumes:
-      # Persist model artifacts across container restarts
-      # Without this, retraining results are lost on restart
       - model_data:/app/models
 
-  # ── PostgreSQL Database ─────────────────────────────────────
+  # ── Streamlit Dashboard ──────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard   # dashboard-only image
+    container_name: medacces_dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      # Points to the API service by its service name inside Docker network
+      - MEDACCES_API_URL=http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── PostgreSQL ───────────────────────────────────────────────────
   db:
-    image: postgres:15-alpine         # alpine = smaller image
+    image: postgres:15-alpine
     container_name: medacces_db
     environment:
       POSTGRES_USER:     postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB:       medacces
     volumes:
-      # Named volume — data survives container restarts
-      # Without this, your database is wiped every restart
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      # Railway and docker compose wait for this to pass
-      # before starting the API container
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
-      - "5432:5432"    # expose so you can connect with DBeaver/pgAdmin
+      - "5432:5432"
 
-
-# ── Named Volumes ───────────────────────────────────────────────────
-# Managed by Docker — persist data outside containers
-# docker compose down        → data survives
-# docker compose down -v     → data deleted (nuclear option)
 volumes:
   postgres_data:
   model_data:

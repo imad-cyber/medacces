@@ -1,0 +1,42 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install only what the dashboard needs
+# No ML training deps — this is a pure frontend service
+RUN pip install --no-cache-dir \
+    streamlit \
+    plotly \
+    pandas \
+    numpy \
+    requests
+
+# Copy only the dashboard file
+COPY dashboard/app.py .
+
+# Streamlit config — disable the default welcome screen
+# and bind to 0.0.0.0 so Railway can reach it
+RUN mkdir -p /root/.streamlit
+RUN echo '\
+[server]\n\
+headless = true\n\
+address = "0.0.0.0"\n\
+port = 8501\n\
+enableCORS = false\n\
+enableXsrfProtection = false\n\
+\n\
+[browser]\n\
+gatherUsageStats = false\n\
+\n\
+[theme]\n\
+base = "dark"\n\
+' > /root/.streamlit/config.toml
+
+EXPOSE 8501
+
+# Railway injects $PORT — we respect it
+CMD streamlit run app.py \
+    --server.port=${PORT:-8501} \
+    --server.address=0.0.0.0 \
+    --server.headless=true \
+    --browser.gatherUsageStats=false
