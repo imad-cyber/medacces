@@ -69,12 +69,24 @@ def _nav_to(page_label: str):
     st.session_state["_nav_target"] = page_label
     st.rerun()
 
+
+def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """Convert #RRGGBB to rgba(r,g,b,a)."""
+    h = (hex_color or "").lstrip("#")
+    if len(h) != 6:
+        return f"rgba(255,255,255,{alpha})"
+    r = int(h[0:2], 16)
+    g = int(h[2:4], 16)
+    b = int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
 # ─────────────────────────────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────
 
 API_URL = os.getenv("API_URL", "http://localhost:8000").strip().rstrip("/")
 GEOJSON_PATH = Path(__file__).parent.parent / "data" / "geo" / "fr_departements.geojson"
+GEOJSON_URL = os.getenv("GEOJSON_URL", "").strip()
 DATA_PATH = Path(__file__).parent.parent / "data" / "raw" / "communes_health.csv"
 META_PATH = Path(__file__).parent.parent / "models" / "artifacts" / "model_metadata.json"
 
@@ -527,6 +539,32 @@ def local_dataset() -> pd.DataFrame | None:
         if col in df.columns:
             df[col] = df[col].astype(str).map(_fix_mojibake)
     return df
+
+
+@st.cache_data(show_spinner=False)
+def load_departments_geojson() -> dict | None:
+    """
+    Loads department geometry for the choropleth.
+
+    Source order:
+    1) Local file at `data/geo/fr_departements.geojson`
+    2) Optional URL via `GEOJSON_URL` env var (downloaded at runtime)
+
+    Expected: each feature has `properties.code` like "01", "2A", "75".
+    """
+    if GEOJSON_PATH.exists():
+        with open(GEOJSON_PATH, encoding="utf-8") as f:
+            return json.load(f)
+
+    if GEOJSON_URL:
+        try:
+            r = requests.get(GEOJSON_URL, timeout=12)
+            if 200 <= r.status_code < 300:
+                return r.json()
+        except Exception:
+            return None
+
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1331,7 +1369,7 @@ def page_analytics():
                     y=subset, name=RISK_LABELS[r],
                     marker=dict(color=RISK_COLORS[r], size=3),
                     line=dict(color=RISK_COLORS[r], width=1.5),
-                    fillcolor=RISK_COLORS[r] + "22",
+                    fillcolor=_hex_to_rgba(RISK_COLORS[r], 0.13),
                     boxmean=True,
                 ))
             fig_box.update_layout(
@@ -1963,10 +2001,8 @@ def page_map():
             index=0,
         )
 
-        geo_available = GEOJSON_PATH.exists()
-        if geo_available:
-            with open(GEOJSON_PATH) as f:
-                geo = json.load(f)
+        geo = load_departments_geojson()
+        if geo:
 
             # Choose value column
             if metric == "High-risk communes":

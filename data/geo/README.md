@@ -11,3 +11,6 @@ Expected format:
 
 If the file is not present, the UI falls back to a ranked bar chart + a department selector.
 
+Optional:
+- You can also set `GEOJSON_URL` (environment variable) to a publicly accessible GeoJSON URL.
+  The dashboard will download it at runtime and cache it.
