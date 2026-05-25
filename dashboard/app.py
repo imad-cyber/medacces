@@ -73,7 +73,8 @@ def _nav_to(page_label: str):
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────
 
-API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
+API_URL = os.getenv("API_URL", "http://localhost:8000").strip().rstrip("/")
+GEOJSON_PATH = Path(__file__).parent.parent / "data" / "geo" / "fr_departements.geojson"
 DATA_PATH = Path(__file__).parent.parent / "data" / "raw" / "communes_health.csv"
 META_PATH = Path(__file__).parent.parent / "models" / "artifacts" / "model_metadata.json"
 
@@ -641,8 +642,8 @@ def render_sidebar() -> str:
     <hr style="border-color:{BORDER};margin:0 16px 16px;">
     """, unsafe_allow_html=True)
 
-    # Nav (keyed so pages can "redirect" by updating session_state)
-    pages = ["🏠  Home", "🎯  Predict", "📊  Analytics", "🤖  Model"]
+    # Nav (minimal, professional)
+    pages = ["Overview", "Map", "APIs", "Predict", "Analytics", "Model"]
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = pages[0]
     page = st.sidebar.radio(
@@ -701,11 +702,11 @@ def page_home():
     # CTA (jump into demo / metrics)
     cta1, cta2, _ = st.columns([1, 1, 2])
     with cta1:
-        if st.button("🎯  Open live demo", use_container_width=True, key="cta_open_demo"):
-            _nav_to("🎯  Predict")
+        if st.button("Open dashboard", use_container_width=True, key="cta_open_demo"):
+            _nav_to("Predict")
     with cta2:
-        if st.button("🤖  View model metrics", use_container_width=True, key="cta_view_model"):
-            _nav_to("🤖  Model")
+        if st.button("View model metrics", use_container_width=True, key="cta_view_model"):
+            _nav_to("Model")
 
     # Meta row
     st.markdown(f"""
@@ -860,8 +861,8 @@ def page_home():
         </div>
         """, unsafe_allow_html=True)
 
-    if st.button("🎯  Go to Predict", use_container_width=True, key="home_go_predict"):
-        _nav_to("🎯  Predict")
+    if st.button("Open live prediction", use_container_width=True, key="home_go_predict"):
+        _nav_to("Predict")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1742,6 +1743,478 @@ def page_model():
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW PAGES (PRODUCT UI)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def page_overview():
+    """Landing page: product narrative + credibility + navigation CTAs."""
+
+    st.markdown(html_live_tag("MedAccès · France · Data-driven access intelligence"),
+                unsafe_allow_html=True)
+
+    st.markdown(
+        html_hero_heading(
+            "Operational intelligence for healthcare access",
+            "Aggregate multi-source indicators, score access risk, and drill down from department to commune—built for decision-grade clarity."
+        ),
+        unsafe_allow_html=True,
+    )
+
+    cta1, cta2, cta3 = st.columns([1.2, 1.2, 2.6])
+    with cta1:
+        if st.button("Open map", use_container_width=True, key="ov_cta_map"):
+            _nav_to("Map")
+    with cta2:
+        if st.button("Explore APIs", use_container_width=True, key="ov_cta_apis"):
+            _nav_to("APIs")
+
+    st.markdown(f"""
+    <div style="display:flex;flex-wrap:wrap;gap:18px;margin:18px 0 24px;">
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">Coverage: 96 departments</span>
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">Dataset: 34k communes</span>
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">Model: XGBoost classifier</span>
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">API: {('online' if api_online() else 'offline')}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Product overview
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(html_section_label("Product overview"), unsafe_allow_html=True)
+    col_a, col_b = st.columns([1, 1], gap="large")
+    with col_a:
+        st.markdown(html_card(f"""
+        <div style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:{MUTED};margin-bottom:10px;">
+          What the platform does
+        </div>
+        <div style="font-size:14px;color:{ACCENT};line-height:1.75;">
+          MedAccès consolidates public health access indicators, produces a consistent risk view across France,
+          and supports fast drill-down into the underlying drivers at department and commune level.
+        </div>
+        """), unsafe_allow_html=True)
+    with col_b:
+        st.markdown(html_card(f"""
+        <div style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:{MUTED};margin-bottom:10px;">
+          Designed for clarity
+        </div>
+        <div style="font-size:14px;color:{ACCENT};line-height:1.75;">
+          A structured UI with progressive disclosure: overview → selection → detail → audit.
+          Minimal color, consistent typography, and data density tuned for scanning.
+        </div>
+        """), unsafe_allow_html=True)
+
+    # Capabilities
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown(html_section_label("Key capabilities"), unsafe_allow_html=True)
+    g1, g2, g3 = st.columns(3, gap="large")
+    with g1:
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">Department map + drill-down</div>
+        <div style="font-size:13px;color:{ACCENT};line-height:1.65;">Choropleth insights with a focused side panel for selected regions.</div>
+        """), unsafe_allow_html=True)
+    with g2:
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">API-driven analytics</div>
+        <div style="font-size:13px;color:{ACCENT};line-height:1.65;">Clear data contracts, metrics, and example outputs for each API surface.</div>
+        """), unsafe_allow_html=True)
+    with g3:
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">Prediction + audit trail</div>
+        <div style="font-size:13px;color:{ACCENT};line-height:1.65;">Live scoring with stored results to support review and monitoring.</div>
+        """), unsafe_allow_html=True)
+
+    # Data sources / APIs
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown(html_section_label("Data sources / APIs"), unsafe_allow_html=True)
+    st.markdown(html_card(f"""
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#f1f5f9;">Predictions API</div>
+          <div style="font-size:12px;color:{MUTED};">Single & batch inference · audit logging</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};align-self:center;">/predict/commune · /predict/batch</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#f1f5f9;">Model API</div>
+          <div style="font-size:12px;color:{MUTED};">Model metadata · health · retrain trigger</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};align-self:center;">/model/info · /model/health</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#f1f5f9;">Communes API</div>
+          <div style="font-size:12px;color:{MUTED};">Stats · dataset browser · prediction log</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};align-self:center;">/communes/stats · /communes/dataset</div>
+      </div>
+    </div>
+    """), unsafe_allow_html=True)
+
+    # Architecture preview
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown(html_section_label("System architecture"), unsafe_allow_html=True)
+    st.markdown(html_card(f"""
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+      <span style="padding:6px 10px;border:1px solid {BORDER};border-radius:999px;background:{NAVY};font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};">Ingestion</span>
+      <span style="color:{MUTED};">→</span>
+      <span style="padding:6px 10px;border:1px solid {BORDER};border-radius:999px;background:{NAVY};font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};">Normalization</span>
+      <span style="color:{MUTED};">→</span>
+      <span style="padding:6px 10px;border:1px solid {BORDER};border-radius:999px;background:{NAVY};font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};">Model scoring</span>
+      <span style="color:{MUTED};">→</span>
+      <span style="padding:6px 10px;border:1px solid {BORDER};border-radius:999px;background:{NAVY};font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};">FastAPI</span>
+      <span style="color:{MUTED};">→</span>
+      <span style="padding:6px 10px;border:1px solid {BORDER};border-radius:999px;background:{NAVY};font-family:'DM Mono',monospace;font-size:11px;color:{ACCENT};">Dashboard</span>
+    </div>
+    <div style="margin-top:10px;font-size:13px;color:{ACCENT};line-height:1.65;">
+      Designed for observability and reuse: versioned artifacts, explicit API contracts, and an audit-friendly prediction log.
+    </div>
+    """), unsafe_allow_html=True)
+
+    # CTA (serious, minimal)
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown(html_section_label("Get started"), unsafe_allow_html=True)
+    c1, c2, _ = st.columns([1.2, 1.2, 2.6])
+    with c1:
+        if st.button("Open map", use_container_width=True, key="ov_cta_map_2"):
+            _nav_to("Map")
+    with c2:
+        if st.button("Run a prediction", use_container_width=True, key="ov_cta_predict"):
+            _nav_to("Predict")
+
+    # Footer links (lightweight)
+    st.markdown(f"""
+    <div style="margin-top:26px;padding-top:16px;border-top:1px solid {BORDER};
+      display:flex;flex-wrap:wrap;gap:14px;align-items:center;">
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">Docs</span>
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">API status</span>
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">Privacy</span>
+      <span style="font-size:12px;color:{MUTED};font-family:'DM Mono',monospace;">Contact</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def _dept_agg(df: pd.DataFrame) -> pd.DataFrame:
+    df2 = df.copy()
+    if "department_code" not in df2.columns:
+        return pd.DataFrame()
+    df2["department_code"] = df2["department_code"].astype(str).str.zfill(2)
+    out = (
+        df2.groupby("department_code")
+        .agg(
+            communes=("commune_code", "count"),
+            avg_risk=("medical_desert_risk", "mean"),
+            high=("medical_desert_risk", lambda s: int((s == 2).sum())),
+            med=("medical_desert_risk", lambda s: int((s == 1).sum())),
+            low=("medical_desert_risk", lambda s: int((s == 0).sum())),
+            gp_density=("gp_density_per_100k", "mean") if "gp_density_per_100k" in df2.columns else ("medical_desert_risk", "mean"),
+        )
+        .reset_index()
+    )
+    # Normalize to 0..2 scale for color
+    out["risk_bucket"] = out["avg_risk"].round().clip(0, 2).astype(int)
+    out["risk_label"] = out["risk_bucket"].map(RISK_LABELS)
+    return out.sort_values("high", ascending=False)
+
+
+def page_map():
+    """Interactive France map (geojson if present, graceful fallback otherwise)."""
+
+    st.markdown(html_section_label("France map"), unsafe_allow_html=True)
+    st.markdown(html_hero_heading(
+        "Department-level risk view",
+        "Hover to inspect metrics. Click to drill down into a department profile and its supporting indicators."
+    ), unsafe_allow_html=True)
+
+    df = local_dataset()
+    if df is None or df.empty:
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+          Dataset not found. Ensure <span style="font-family:'DM Mono',monospace;">data/raw/communes_health.csv</span> is present.
+        </div>
+        """), unsafe_allow_html=True)
+        return
+
+    dept = _dept_agg(df)
+    if dept.empty:
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+          Unable to compute department aggregates from the dataset.
+        </div>
+        """), unsafe_allow_html=True)
+        return
+
+    left, right = st.columns([3, 1.35], gap="large")
+
+    # Selection state
+    if "map_dept" not in st.session_state:
+        st.session_state["map_dept"] = str(dept.iloc[0]["department_code"])
+
+    with left:
+        metric = st.selectbox(
+            "Metric",
+            ["Risk (bucketed)", "High-risk communes", "Commune count", "Avg GP density/100k"],
+            index=0,
+        )
+
+        geo_available = GEOJSON_PATH.exists()
+        if geo_available:
+            with open(GEOJSON_PATH) as f:
+                geo = json.load(f)
+
+            # Choose value column
+            if metric == "High-risk communes":
+                z = dept["high"]
+                z_title = "High-risk communes"
+            elif metric == "Commune count":
+                z = dept["communes"]
+                z_title = "Communes"
+            elif metric == "Avg GP density/100k":
+                z = dept["gp_density"]
+                z_title = "GP density/100k"
+            else:
+                z = dept["risk_bucket"]
+                z_title = "Risk bucket"
+
+            fig = go.Figure(go.Choropleth(
+                geojson=geo,
+                featureidkey="properties.code",
+                locations=dept["department_code"],
+                z=z,
+                colorscale=[
+                    [0.0, GREEN],
+                    [0.5, AMBER],
+                    [1.0, RED],
+                ] if metric == "Risk (bucketed)" else "Blues",
+                marker_line_color=BORDER,
+                marker_line_width=0.6,
+                colorbar=dict(
+                    title=z_title,
+                    thickness=12,
+                    tickfont=dict(color=ACCENT, family="DM Mono"),
+                    titlefont=dict(color=ACCENT, family="DM Mono", size=11),
+                ),
+                customdata=np.stack([
+                    dept["risk_label"],
+                    dept["communes"],
+                    dept["high"],
+                    dept["gp_density"],
+                ], axis=-1),
+                hovertemplate=(
+                    "<b>Dept %{location}</b><br>"
+                    "Risk: %{customdata[0]}<br>"
+                    "Communes: %{customdata[1]}<br>"
+                    "High-risk: %{customdata[2]}<br>"
+                    "GP density: %{customdata[3]:.1f}/100k"
+                    "<extra></extra>"
+                ),
+            ))
+            fig.update_geos(
+                fitbounds="locations",
+                visible=False,
+                showcountries=False,
+                showcoastlines=False,
+                showframe=False,
+                bgcolor="rgba(0,0,0,0)",
+            )
+            fig.update_layout(**plotly_layout(height=640, margin=dict(l=0, r=0, t=0, b=0)))
+
+            # Click selection
+            ev = st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG, on_select="rerun")
+            # Streamlit's plotly selection event API varies by version; provide a deterministic fallback selector below.
+
+        else:
+            st.markdown(html_card(f"""
+            <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+              Map geometry not found. Add a GeoJSON at
+              <span style="font-family:'DM Mono',monospace;">data/geo/fr_departements.geojson</span>
+              with department code in <span style="font-family:'DM Mono',monospace;">properties.code</span>.
+            </div>
+            """), unsafe_allow_html=True)
+
+            # Fallback visualization (still useful)
+            fig_bar = go.Figure(go.Bar(
+                x=dept["high"].head(20).values[::-1],
+                y=dept["department_code"].head(20).values[::-1],
+                orientation="h",
+                marker=dict(color=dept["high"].head(20).values[::-1], colorscale=[[0, AMBER], [1, RED]]),
+                hovertemplate="Dept %{y}: %{x} high-risk communes<extra></extra>",
+            ))
+            fig_bar.update_layout(**plotly_layout(height=520, margin=dict(l=0, r=0, t=10, b=0)))
+            st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CFG)
+
+        # Deterministic selection (works in all versions)
+        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+        picked = st.selectbox(
+            "Select department",
+            dept["department_code"].tolist(),
+            index=dept["department_code"].tolist().index(st.session_state["map_dept"]) if st.session_state["map_dept"] in dept["department_code"].tolist() else 0,
+        )
+        st.session_state["map_dept"] = picked
+
+    with right:
+        sel = dept[dept["department_code"] == st.session_state["map_dept"]].head(1)
+        if sel.empty:
+            return
+        s = sel.iloc[0].to_dict()
+        st.markdown(html_section_label("Selection"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:{MUTED};">Department</div>
+            <div style="font-size:20px;font-weight:600;color:#f1f5f9;margin-top:6px;">{s['department_code']}</div>
+          </div>
+          <div style="text-align:right;">
+            {html_risk_badge(s['risk_label'])}
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};margin-top:8px;">avg risk: {s['avg_risk']:.2f}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
+          <div style="padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};text-transform:uppercase;letter-spacing:0.06em;">Communes</div>
+            <div style="font-size:18px;font-weight:600;color:#f1f5f9;margin-top:6px;">{int(s['communes']):,}</div>
+          </div>
+          <div style="padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};text-transform:uppercase;letter-spacing:0.06em;">High-risk</div>
+            <div style="font-size:18px;font-weight:600;color:#f1f5f9;margin-top:6px;">{int(s['high']):,}</div>
+          </div>
+        </div>
+        """), unsafe_allow_html=True)
+
+        st.markdown(html_section_label("API-driven insights"), unsafe_allow_html=True)
+        online = api_online()
+        status = "Online" if online else "Offline"
+        st.markdown(html_card(f"""
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:13px;color:{ACCENT};">Backend API</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:{GREEN if online else RED};">{status}</div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:{MUTED};line-height:1.6;">
+          Use the APIs page to inspect endpoints, example outputs, and integration points.
+        </div>
+        """), unsafe_allow_html=True)
+
+
+def page_apis():
+    """One page per API (selected within the page)."""
+
+    st.markdown(html_section_label("APIs"), unsafe_allow_html=True)
+    st.markdown(html_hero_heading(
+        "API surfaces",
+        "Structured documentation with example outputs and integration context—designed for reuse across the platform."
+    ), unsafe_allow_html=True)
+
+    api_choice = st.selectbox(
+        "Select API",
+        ["Predictions API", "Model API", "Communes API"],
+        index=0,
+    )
+
+    if api_choice == "Predictions API":
+        st.markdown(html_section_label("What it does"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="font-size:14px;color:{ACCENT};line-height:1.75;">
+          Scores a commune (or batch of communes) and returns risk classification, confidence,
+          probabilities, and aligned recommendations. Intended for both live UI use and batch workflows.
+        </div>
+        """), unsafe_allow_html=True)
+
+        st.markdown(html_section_label("Data it provides"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};text-transform:uppercase;letter-spacing:0.06em;">Risk label</div>
+            <div style="font-size:13px;color:{ACCENT};margin-top:6px;">Low · Medium · High</div>
+          </div>
+          <div style="padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};text-transform:uppercase;letter-spacing:0.06em;">Confidence</div>
+            <div style="font-size:13px;color:{ACCENT};margin-top:6px;">Probability of predicted class</div>
+          </div>
+          <div style="padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};text-transform:uppercase;letter-spacing:0.06em;">Probabilities</div>
+            <div style="font-size:13px;color:{ACCENT};margin-top:6px;">Low/Medium/High distribution</div>
+          </div>
+          <div style="padding:10px 12px;border:1px solid {BORDER};border-radius:6px;background:{NAVY};">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:{MUTED};text-transform:uppercase;letter-spacing:0.06em;">Recommendations</div>
+            <div style="font-size:13px;color:{ACCENT};margin-top:6px;">Action-oriented guidance</div>
+          </div>
+        </div>
+        """), unsafe_allow_html=True)
+
+        st.markdown(html_section_label("Example outputs"), unsafe_allow_html=True)
+        df = local_dataset()
+        sample = df.sample(8, random_state=7) if df is not None and not df.empty else None
+        if sample is not None:
+            cols = [c for c in ["commune_code", "commune_name", "department_code", "medical_desert_risk"] if c in sample.columns]
+            st.dataframe(sample[cols].reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.markdown(html_section_label("Integration"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+          Used by <b>Predict</b> for live inference and by <b>Analytics</b> for audit trails.
+          Endpoint contracts are designed to support both UI interactions and scheduled batch runs.
+        </div>
+        """), unsafe_allow_html=True)
+
+    elif api_choice == "Model API":
+        st.markdown(html_section_label("What it does"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="font-size:14px;color:{ACCENT};line-height:1.75;">
+          Exposes model metadata, health checks, and optional retraining triggers. Supports versioning and monitoring workflows.
+        </div>
+        """), unsafe_allow_html=True)
+
+        st.markdown(html_section_label("Example outputs"), unsafe_allow_html=True)
+        meta = api_get("/model/info") or local_metadata() or {}
+        if meta:
+            kpi1, kpi2, kpi3 = st.columns(3)
+            with kpi1: st.metric("Version", str(meta.get("version", "—")))
+            with kpi2: st.metric("Algorithm", str(meta.get("model_type", meta.get("model", "—"))))
+            with kpi3: st.metric("Accuracy", str(meta.get("accuracy", meta.get("metrics", {}).get("accuracy", "—"))))
+        else:
+            st.markdown(html_card(f"""
+            <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+              Model metadata unavailable (API offline and no local artifacts found).
+            </div>
+            """), unsafe_allow_html=True)
+
+        st.markdown(html_section_label("Integration"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+          Used by <b>Model</b> for performance metrics and by platform health indicators in the sidebar.
+        </div>
+        """), unsafe_allow_html=True)
+
+    else:
+        st.markdown(html_section_label("What it does"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="font-size:14px;color:{ACCENT};line-height:1.75;">
+          Provides dataset browsing, aggregate statistics, and a prediction audit log.
+          Designed for transparency and operational monitoring.
+        </div>
+        """), unsafe_allow_html=True)
+
+        st.markdown(html_section_label("Visualizations"), unsafe_allow_html=True)
+        df = local_dataset()
+        if df is not None and not df.empty:
+            dept = _dept_agg(df)
+            fig = go.Figure(go.Bar(
+                x=dept["high"].head(12).values[::-1],
+                y=dept["department_code"].head(12).values[::-1],
+                orientation="h",
+                marker=dict(color=dept["high"].head(12).values[::-1], colorscale=[[0, AMBER], [1, RED]]),
+                hovertemplate="Dept %{y}: %{x} high-risk communes<extra></extra>",
+            ))
+            fig.update_layout(**plotly_layout(height=360, margin=dict(l=0, r=0, t=0, b=0)))
+            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CFG)
+        st.markdown(html_section_label("Integration"), unsafe_allow_html=True)
+        st.markdown(html_card(f"""
+        <div style="font-size:13px;color:{ACCENT};line-height:1.7;">
+          Used by <b>Analytics</b> for exploration and by <b>Map</b> for department aggregates and drill-down context.
+        </div>
+        """), unsafe_allow_html=True)
+
+
 # ─────────────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────────────
@@ -1750,10 +2223,12 @@ def main():
     inject_css()
     page = render_sidebar()
 
-    if   "Home"      in page: page_home()
-    elif "Predict"   in page: page_predict()
-    elif "Analytics" in page: page_analytics()
-    elif "Model"     in page: page_model()
+    if   page == "Overview":  page_overview()
+    elif page == "Map":       page_map()
+    elif page == "APIs":      page_apis()
+    elif page == "Predict":   page_predict()
+    elif page == "Analytics": page_analytics()
+    elif page == "Model":     page_model()
 
 
 if __name__ == "__main__":
