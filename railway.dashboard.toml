@@ -3,7 +3,8 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile.dashboard"
 
 [deploy]
-startCommand = "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false"
+# NOTE: Railway does not always expand `$PORT` unless executed via a shell.
+startCommand = "sh -c \"streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false\""
 healthcheckPath = "/_stcore/health"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"
