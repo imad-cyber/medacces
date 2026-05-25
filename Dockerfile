@@ -55,18 +55,11 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application + trained model artifacts
 COPY --from=builder /app .
 
-# Tell Docker which port the app listens on
-# Railway and other platforms read this
+# The actual port is provided by the platform via $PORT.
 EXPOSE 8000
 
 # Production server command
 # Gunicorn manages worker processes
 # UvicornWorker handles async FastAPI requests
 # Railway injects $PORT — we fall back to 8000 locally
-CMD gunicorn app.main:app \
-    --workers 2 \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:${PORT:-8000} \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile -
+CMD ["sh", "-c", "./deploy/start.sh"]
